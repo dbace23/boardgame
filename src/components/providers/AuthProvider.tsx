@@ -95,6 +95,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
+      // Create user in users table
+      const { error: userError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: data.user?.id,
+            name,
+            email,
+            city
+          }
+        ]);
+
+      if (userError) throw userError;
+
       toast.success('Please check your email to confirm your account');
       navigate('/check-email');
     } catch (error) {
