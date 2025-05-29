@@ -10,10 +10,10 @@ function ForgotPasswordPage() {
   const { forgotPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email) {
       toast.error('Please enter your email address');
       return;
@@ -22,7 +22,6 @@ function ForgotPasswordPage() {
     try {
       setIsLoading(true);
       await forgotPassword(email);
-      setIsSubmitted(true);
       toast.success('Password reset instructions sent to your email');
     } catch (error) {
       console.error('Error sending reset email:', error);
@@ -31,30 +30,6 @@ function ForgotPasswordPage() {
       setIsLoading(false);
     }
   };
-
-  if (isSubmitted) {
-    return (
-      <>
-        <AuthHeader />
-        <div className="min-h-[calc(100vh-4rem)] bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-          <div className="sm:mx-auto sm:w-full sm:max-w-md">
-            <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Check Your Email</h2>
-              <p className="text-gray-600 mb-6">
-                We've sent password reset instructions to {email}
-              </p>
-              <Link
-                to="/login"
-                className="text-blue-600 hover:text-blue-500 font-medium"
-              >
-                Return to Login
-              </Link>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
 
   return (
     <>
