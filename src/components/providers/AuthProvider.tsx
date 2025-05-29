@@ -1,18 +1,17 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { supabase } from '../../lib/supabase'
-
-
-
+import { supabase } from '../../lib/supabase';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   signUp: (email: string, password: string, name: string, city: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (password: string) => Promise<void>;
 }
 
 interface User {
@@ -22,164 +21,134 @@ interface User {
   avatar_url: string;
 }
 
- 
-
-// Mock user data
-const MOCK_USER: User = {
-  id: 'mock-user-123',
-  name: 'Test User',
-  email: 'test@example.com',
-  avatar_url: 'https://images.pexels.com/photos/1462630/pexels-photo-1462630.jpeg'
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [user, setUser] = React.useState<User | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  // Check for stored auth on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('mockUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata.full_name || '',
+          avatar_url: session.user.user_metadata.avatar_url || ''
+        });
+      }
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata.full_name || '',
+          avatar_url: session.user.user_metadata.avatar_url || ''
+        });
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      if (error || !data.session) {
-        throw new Error(error?.message || 'Login failed');
-      }
-
-      const { user } = data;
-
-      // Optional: Fetch profile info from your `users` table
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      setUser({
-        id: user.id,
-        email: user.email!,
-        name: profile?.full_name || '',
-        avatar_url: profile?.avatar_url || ''
-      });
-
-      localStorage.setItem('mockUser', JSON.stringify({
-        id: user.id,
-        email: user.email,
-        name: profile?.full_name || '',
-        avatar_url: profile?.avatar_url || ''
-      }));
+      if (error) throw error;
 
       toast.success('Logged in successfully!');
       navigate('/profile');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to log in');
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to sign in');
+      throw error;
     }
   };
 
   const signUp = async (email: string, password: string, name: string, city: string) => {
-    setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: name, city }
+          data: {
+            full_name: name,
+            city
+          }
         }
       });
 
-      if (error) {
-        toast.error(error.message);
-        throw error;
-      }
+      if (error) throw error;
 
-      const user = data.user;
-      if (user) {
-        // Insert to users table immediately
-        const { error: insertError } = await supabase.from('users').insert({
-          id: user.id,
-          email,
-          full_name: name,
-          city,
-          has_onboarded: false
-        });
-
-        if (insertError) {
-          console.error('Error inserting user to users table:', insertError.message);
-          // fallback is still handled in onAuthStateChange if needed
-        }
-      }
-
-      toast.success('Check your email to confirm your account');
-    } catch (err) {
-      console.error('Signup error:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
+      toast.success('Please check your email to confirm your account');
+      navigate('/check-email');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to sign up');
+      throw error;
     }
   };
 
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
 
-  const signOut = () => {
-    setUser(null);
-    localStorage.removeItem('mockUser');
-    navigate('/login');
-    toast.success('Successfully logged out!');
+      navigate('/login');
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to log out');
+    }
   };
 
-  // Protect routes that require authentication
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const user = session.user;
+  const forgotPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
 
-          const { data: existing, error } = await supabase
-            .from('users')
-            .select('id, has_onboarded')
-            .eq('id', user.id)
-            .single();
+      if (error) throw error;
 
-          if (error) {
-            console.error('Failed to fetch user profile:', error.message);
-            return;
-          }
+      toast.success('Password reset instructions sent to your email');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send reset email');
+      throw error;
+    }
+  };
 
-          if (!existing) {
-            await supabase.from('users').insert({
-              id: user.id,
-              email: user.email,
-              full_name: user.user_metadata?.full_name,
-              city: user.user_metadata?.city,
-              has_onboarded: false
-            });
+  const resetPassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password
+      });
 
-            navigate('/profile/onboarding');
-          } else if (existing.has_onboarded === false) {
-            navigate('/profile/onboarding');
-          }
-        }
-      }
-    );
+      if (error) throw error;
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate]);
+      toast.success('Password updated successfully');
+      navigate('/login');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to reset password');
+      throw error;
+    }
+  };
 
   const value = {
     isAuthenticated: !!user,
@@ -188,6 +157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signOut,
     signUp,
+    forgotPassword,
+    resetPassword
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
