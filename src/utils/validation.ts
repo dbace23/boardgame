@@ -1,13 +1,10 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  phone: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number must not exceed 15 digits')
-    .regex(/^\+?[\d\s-]+$/, 'Invalid phone number format'),
-  pin: z.string()
-    .length(6, 'PIN must be exactly 6 digits')
-    .regex(/^\d+$/, 'PIN must contain only numbers')
+  email: z.string()
+    .email('Invalid email address'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
 });
 
 export const registerSchema = z
@@ -40,8 +37,6 @@ export const registerSchema = z
     path: ['confirmPassword']
   });
 
-export type RegisterFormData = z.infer<typeof registerSchema>;
-
 export const profileSchema = z.object({
   name: z.string()
     .min(2, 'Name must be at least 2 characters')
@@ -50,10 +45,6 @@ export const profileSchema = z.object({
     .email('Invalid email address')
     .optional()
     .or(z.literal('')),
-  phoneNumber: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number must not exceed 15 digits')
-    .regex(/^\+?[\d\s-]+$/, 'Invalid phone number format'),
   city: z.string()
     .min(2, 'City must be at least 2 characters')
     .max(50, 'City must not exceed 50 characters')
