@@ -1,0 +1,43 @@
+{
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.3",
+    "@hookform/resolvers": "^3.3.4",
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-select": "^2.2.4",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@supabase/supabase-js": "^2.39.3",
+    "@tanstack/react-query": "^5.17.19",
+    "@tanstack/react-query-devtools": "^5.17.19",
+    "@uploadthing/react": "^6.0.2",
+    "chart.js": "^4.4.1",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.3.1",
+    "fast-xml-parser": "^5.2.3",
+    "libphonenumber-js": "^1.12.8",
+    "lucide-react": "^0.316.0",
+    "prop-types": "^15.8.1",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-easy-crop": "^5.4.1",
+    "react-hook-form": "^7.49.3",
+    "react-hot-toast": "^2.4.1",
+    "react-lazy-load-image-component": "^1.6.0",
+    "react-rating-stars-component": "^2.2.0",
+    "react-router-dom": "^6.21.3",
+    "react-share": "^5.0.3",
+    "uploadthing": "^6.0.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/react-easy-crop": "^1.16.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.0.12"
+  }
+}
